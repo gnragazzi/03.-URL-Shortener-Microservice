@@ -1,24 +1,60 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const app = express();
+const db = require('./myApp')
+require('dotenv').config()
+const express = require('express')
+const cors = require('cors')
+const app = express()
+const bodyParser = require('body-parser')
+const dns = require('dns')
+let mongoose
+try {
+  mongoose = require('mongoose')
+} catch (error) {
+  console.log(error)
+}
 
+console.log(db.createAndSaveUrl)
+console.log(db.checkShortUrl)
 // Basic Configuration
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3000
 
-app.use(cors());
+app.use(cors())
 
-app.use('/public', express.static(`${process.cwd()}/public`));
+app.use('/public', express.static(`${process.cwd()}/public`))
 
-app.get('/', function(req, res) {
-  res.sendFile(process.cwd() + '/views/index.html');
-});
+app.use(bodyParser.urlencoded({ extended: false }))
 
-// Your first API endpoint
-app.get('/api/hello', function(req, res) {
-  res.json({ greeting: 'hello API' });
-});
+app.get('/', function (req, res) {
+  res.sendFile(process.cwd() + '/views/index.html')
+})
 
-app.listen(port, function() {
-  console.log(`Listening on port ${port}`);
-});
+app.post('/api/shorturl/new', (req, res) => {
+  const { url } = req.body
+  const regex = /^https*:[^a-z0-9]*www./
+  if (regex.test(url)) {
+    const correctUrl = url.substring(url.match(regex)[0].length)
+    dns.lookup(correctUrl, (err, address, family) => {
+      if (err) {
+        res.json({ error: err.code })
+      } else {
+        const shortUrl = db.getUniqueNumber()
+        db.createAndSaveUrl(url, shortUrl, (err, data) => {
+          if (err) console.log(err)
+          res.json({ original_url: `${url}`, short_url: shortUrl })
+        })
+      }
+    })
+  } else {
+    res.json({ error: 'invalid url' })
+  }
+})
+app.get('/api/shorturl/:shortUrl', (req, res) => {
+  const { shortUrl } = req.params
+  db.checkShortUrl(shortUrl, (err, data) => {
+    if (err) console.log(err)
+    const { original_url } = data
+    res.redirect(original_url)
+  })
+})
+app.listen(port, function () {
+  console.log(`Listening on port ${port}`)
+})
