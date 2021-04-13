@@ -30,7 +30,15 @@ app.get('/', function (req, res) {
 app.post('/api/shorturl/new', (req, res) => {
   const { url } = req.body
   const regex = /^https*:[^a-z0-9]*www./
-  if (regex.test(url)) {
+  const secondRegex = /^https*:\/\//
+
+  if (secondRegex.test(url)) {
+    const shortUrl = db.getUniqueNumber()
+    db.createAndSaveUrl(url, shortUrl, (err, data) => {
+      if (err) console.log(err)
+      res.json({ original_url: `${url}`, short_url: shortUrl })
+    })
+  } else if (regex.test(url)) {
     const correctUrl = url.substring(url.match(regex)[0].length)
     dns.lookup(correctUrl, (err, address, family) => {
       if (err) {
