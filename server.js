@@ -12,12 +12,9 @@ try {
   console.log(error)
 }
 
-console.log(db.createAndSaveUrl)
-console.log(db.checkShortUrl)
+app.use(cors())
 // Basic Configuration
 const port = process.env.PORT || 3000
-
-app.use(cors())
 
 app.use('/public', express.static(`${process.cwd()}/public`))
 
